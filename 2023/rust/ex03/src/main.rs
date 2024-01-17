@@ -1,7 +1,8 @@
 use std::cmp::min;
-use std::collections::LinkedList;
+use std::collections::{LinkedList, HashMap, HashSet};
 use std::fs;
 
+#[derive(Hash,Eq,PartialEq,Clone,Copy)]
 struct Number {
     x: usize,
     y: usize,
@@ -55,7 +56,8 @@ fn solve(input: &str) -> [u32; 2] {
         }
     }
 
-    let mut counter: u32 = 0;
+    let mut part1: u32 = 0;
+    let mut asterisks_tracker: HashMap<usize,HashSet<Number>> = HashMap::new();
     let map = lines.join("");
     for num in numbers {
         let min_x = if num.x == 0 { num.x } else { num.x - 1 };
@@ -65,15 +67,39 @@ fn solve(input: &str) -> [u32; 2] {
 
         for x in min_x..max_x {
             for y in min_y..max_y {
-                let current_char = map.chars().nth(y * width + x).unwrap();
+                let index = y * width + x;
+                let current_char = map.chars().nth(index).unwrap();
                 if !current_char.is_digit(10) && current_char != '.' {
-                    counter += num.number;
+                    part1 += num.number;
+
+                    if current_char == '*' {
+                        let tracker = asterisks_tracker.get(&index);
+                        match tracker {
+                            Some(tr) => {
+                                let mut numbers = tr.clone();
+                                numbers.insert(num);
+                                asterisks_tracker.insert(index, numbers);
+                            },
+                            None => {
+                                let numbers: HashSet<Number> = HashSet::from([num]);
+                                asterisks_tracker.insert(index, numbers);
+                            },
+                        }
+                    }
                 }
             }
         }
     }
 
-    [counter, 0]
+    let part2: u32 = asterisks_tracker.iter().filter_map(|(_, numbers)| {
+        if numbers.len() != 2 {
+            return None;
+        }
+
+        Some(numbers.iter().fold(1, |accumulator, num| accumulator * num.number))
+    }).sum();
+
+    [part1, part2]
 }
 
 fn main() {
@@ -101,5 +127,6 @@ mod tests {
 
         let answer = solve(input);
         assert_eq!(answer[0], 4361);
+        assert_eq!(answer[1], 467835);
     }
 }
